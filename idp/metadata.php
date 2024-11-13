@@ -30,26 +30,35 @@ require_once('../locallib.php');
 
 $saml2auth = new \auth_saml2\auth();
 
-$cert = file_get_contents($saml2auth->certcrt);
-$cert = preg_replace('~(-----(BEGIN|END) CERTIFICATE-----)|\n~', '', $cert);
-$baseurl = $CFG->wwwroot . '/auth/saml2/idp';
+if ($saml2auth->config->moodleidpenabled) {
+    $download = optional_param('download', '', PARAM_RAW);
+    if ($download) {
+        header('Content-Disposition: attachment; filename=' . $saml2auth->spname . '.xml');
+    }
 
-$xml = <<<EOF
-<md:EntityDescriptor entityID="{$baseurl}/metadata.php" xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata">
-<md:IDPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol" WantAuthnRequestsSigned="false">
-<md:KeyDescriptor>
-    <KeyInfo xmlns="http://www.w3.org/2000/09/xmldsig#">
-        <X509Data><X509Certificate>{$cert}</X509Certificate></X509Data>
-    </KeyInfo>
-</md:KeyDescriptor>
-<md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
-    Location="{$baseurl}/slo.php" />
-<md:NameIDFormat>urn:oasis:names:tc:SAML:2.0:nameid-format:persistent</md:NameIDFormat>
-<md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
-    Location="{$baseurl}/sso.php" />
-</md:IDPSSODescriptor>
-</md:EntityDescriptor>
-EOF;
+    $cert = file_get_contents($saml2auth->certcrt);
+    $cert = preg_replace('~(-----(BEGIN|END) CERTIFICATE-----)|\n~', '', $cert);
+    $baseurl = $CFG->wwwroot . '/auth/saml2/idp';
 
-header('Content-Type: text/xml');
-echo($xml);
+    $xml = <<<EOF
+    <md:EntityDescriptor entityID="{$baseurl}/metadata.php" xmlns:md="urn:oasis:names:tc:SAML:2.0:metadata">
+    <md:IDPSSODescriptor protocolSupportEnumeration="urn:oasis:names:tc:SAML:2.0:protocol" WantAuthnRequestsSigned="false">
+    <md:KeyDescriptor>
+        <KeyInfo xmlns="http://www.w3.org/2000/09/xmldsig#">
+            <X509Data><X509Certificate>{$cert}</X509Certificate></X509Data>
+        </KeyInfo>
+    </md:KeyDescriptor>
+    <md:SingleLogoutService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+        Location="{$baseurl}/slo.php" />
+    <md:NameIDFormat>urn:oasis:names:tc:SAML:2.0:nameid-format:persistent</md:NameIDFormat>
+    <md:SingleSignOnService Binding="urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect"
+        Location="{$baseurl}/sso.php" />
+    </md:IDPSSODescriptor>
+    </md:EntityDescriptor>
+    EOF;
+
+    header('Content-Type: text/xml');
+    echo($xml);
+} else {
+    throw new saml2_exception('idp_enabled_error', get_string('moodleidpenabled_error', 'auth_saml2'));
+}

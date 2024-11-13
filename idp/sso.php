@@ -31,8 +31,7 @@ $relaystate = optional_param('RelayState', '', PARAM_RAW);
 
 if (isguestuser()) {
     // Guest user not allowed here.
-    // TODO: add exception.
-    die;
+    throw new saml2_exception('guest_error', get_string('moodleidpguest_error', 'auth_saml2'));
 }
 
 // Get the request data.
@@ -54,6 +53,20 @@ $attributes = [
 $id = $xpath->evaluate('normalize-space(/*/@ID)');
 $destination = htmlspecialchars($xpath->evaluate('normalize-space(/*/@AssertionConsumerServiceURL)'));
 $sp = $xpath->evaluate('normalize-space(/*/*[local-name() = "Issuer"])');
+
+// Confirm we know about this SP.
+$knownsps = [];
+foreach (explode(PHP_EOL, $saml2auth->config->moodleidpsplist) as $ksp) {
+    $ksp = trim($ksp);
+    if (empty($ksp)) {
+        continue;
+    }
+    $knownsps[] = $ksp;
+}
+
+if (!in_array($sp, $knownsps)) {
+    throw new saml2_exception('unknown_sp_error', get_string('moodleidpsplist_error', 'auth_saml2', $sp));
+}
 
 // Get time in UTC.
 $datetime = new DateTime();
