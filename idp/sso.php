@@ -41,13 +41,15 @@ $domxml = new DOMDocument();
 $domxml->loadXML($request);
 $xpath = new DOMXPath($domxml);
 
-// Attributes provided by the Behat step.
-$attributes = [
-    'uid' => $USER->username,
-    'email' => $USER->email,
-    'firstname' => $USER->firstname,
-    'lastname' => $USER->lastname
-];
+// Load profile fields into attributes.
+$authplugin = get_auth_plugin('saml2');
+$userfields = array_merge($authplugin->userfields, $authplugin->get_custom_user_profile_fields());
+profile_load_data($USER);
+// Add username as `uid` as many services look for `uid` by default.
+$attributes = ['uid' => $USER->username];
+foreach ($userfields as $field) {
+    $attributes[$field] = $USER->$field ? $USER->$field : '';
+}
 
 // Get data from input request.
 $id = $xpath->evaluate('normalize-space(/*/@ID)');
